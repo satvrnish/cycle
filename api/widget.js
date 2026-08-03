@@ -77,14 +77,14 @@ export default async function handler(req, res) {
         const currentData = phaseValues[phaseKey] || {};
 
         const titleMap = {
-            'menstruation_1': 'Menstruation (Part 1)',
-            'menstruation_2': 'Menstruation (Part 2)',
-            'follicular_1': 'Follicular (Part 1)',
-            'follicular_2': 'Follicular (Part 2)',
+            'menstruation_1': 'Menstruation • Part 1',
+            'menstruation_2': 'Menstruation • Part 2',
+            'follicular_1': 'Follicular • Part 1',
+            'follicular_2': 'Follicular • Part 2',
             'ovulation': 'Ovulation',
-            'luteal_1': 'Luteal (Part 1)',
-            'luteal_2': 'Luteal (Part 2)',
-            'luteal_3': 'Luteal (Part 3)'
+            'luteal_1': 'Luteal • Part 1',
+            'luteal_2': 'Luteal • Part 2',
+            'luteal_3': 'Luteal • Part 3'
         };
 
         return res.status(200).json({
