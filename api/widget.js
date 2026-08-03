@@ -1,35 +1,44 @@
 export default async function handler(req, res) {
-    // Enable CORS for KWGT / mobile widgets
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate');
 
-    // Read keys securely from Vercel settings (or fallback to string)
-    const BIN_ID = process.env.JSONBIN_BIN_ID || "YOUR_BIN_ID_HERE";
-    const API_KEY = process.env.JSONBIN_MASTER_KEY || "YOUR_MASTER_KEY_HERE";
+    // Replace placeholders below with actual strings IF you aren't using Vercel Environment Variables
+    const BIN_ID = process.env.JSONBIN_BIN_ID || "YOUR_ACTUAL_BIN_ID";
+    const API_KEY = process.env.JSONBIN_MASTER_KEY || "YOUR_ACTUAL_MASTER_KEY";
 
     try {
         const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
             headers: { "X-Master-Key": API_KEY }
         });
         const data = await response.json();
-        const record = data.record;
 
+        // 1. Check if JSONBin returned an error (e.g., bad API key or wrong Bin ID)
+        if (!response.ok || !data.record) {
+            return res.status(400).json({
+                error: "JSONBin API Error",
+                details: data.message || data
+            });
+        }
+
+        const record = data.record;
         const loggedDates = record.dates || [];
         const phaseValues = record.values || {};
         const DEFAULT_CYCLE = 28;
         const DEFAULT_PERIOD = 5;
 
+        // 2. Default state if no dates are logged yet
         if (loggedDates.length === 0) {
             return res.status(200).json({
                 day: "Day --",
                 phaseKey: "none",
-                title: "No Data",
-                vibe: "Log a period to start.",
+                title: "No Data Logged",
+                vibe: "Log a period in the web app to start tracking.",
                 priorities: "",
                 action: ""
             });
         }
 
+        // 3. Cycle Calculation Logic
         const sorted = [...loggedDates].sort();
         let starts = [sorted[0]];
         for (let i = 1; i < sorted.length; i++) {
