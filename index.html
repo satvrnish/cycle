@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#F9F9F7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Cycle</title>
+    <style>
+        /* --- DESIGN SYSTEM (Reading List UI) --- */
+        @font-face { font-family: 'TanPearl'; src: url('./TanPearl.otf'); }
+
+        :root {
+            --bg-paper: #F9F9F7;    
+            --ink-black: #1A1A1A;   
+            --ink-faded: #888888;
+            --border: rgba(0,0,0,0.1);
+            --item-active: rgba(0,0,0,0.04);
+            
+            /* Specific to Cycle App */
+            --period-red: #A33B3B; 
+            
+            /* Sub-phase Hormonal Colors */
+            --color-m1: #A33B3B;
+            --color-m2: #D35400;
+            --color-f1: #27AE60;
+            --color-f2: #2ECC71;
+            --color-ov: #9B59B6;
+            --color-l1: #F1C40F;
+            --color-l2: #F39C12;
+            --color-l3: #7F8C8D;
+            
+            --font-serif: 'TanPearl', serif; 
+            --font-mono: 'Segoe UI', monospace;
+            --safe-top: env(safe-area-inset-top, 0px);
+        }
+
+        body.dark-mode { 
+            --bg-paper: #111111; 
+            --ink-black: #E0E0E0; 
+            --ink-faded: #888888;
+            --item-active: rgba(255,255,255,0.05);
+            --border: rgba(255,255,255,0.1); 
+            --period-red: #D65A5A;
+            
+            /* Dark Mode Sub-phase Adjustments */
+            --color-m1: #D65A5A;
+            --color-m2: #E67E22;
+            --color-f1: #2ECC71;
+            --color-f2: #58D68D;
+            --color-ov: #BB8FCE;
+            --color-l1: #F4D03F;
+            --color-l2: #F5B041;
+            --color-l3: #95A5A6;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0; background-color: var(--bg-paper); color: var(--ink-black);
+            font-family: var(--font-mono); height: 100dvh; display: flex;
+            flex-direction: column; overflow: hidden; 
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        /* --- HEADER --- */
+        header {
+            padding: 20px; padding-top: calc(20px + var(--safe-top));
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            background: var(--bg-paper);
+            z-index: 50;
+        }
+        
+        .header-title { font-family: var(--font-serif); font-size: 22px; }
+        .header-actions { display: flex; gap: 18px; align-items: center; }
+        
+        .icon-btn { 
+            background: none; border: none; padding: 0; cursor: pointer; 
+            color: var(--ink-black); display: flex; align-items: center; 
+            transition: transform 0.2s;
+        }
+        .icon-btn:active { transform: scale(0.9); }
+
+        .icon-moon { display: block; }
+        .icon-sun { display: none; }
+        body.dark-mode .icon-moon { display: none; }
+        body.dark-mode .icon-sun { display: block; }
+
+        /* --- BUTTONS & BADGES --- */
+        .btn-panel {
+            background: transparent; border: 1px solid var(--ink-black); color: var(--ink-black);
+            padding: 12px 16px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+            letter-spacing: 1px; cursor: pointer; border-radius: 4px; text-align: center;
+            transition: background-color 0.2s, color 0.2s; width: 100%; font-weight: bold;
+        }
+        .btn-panel:active { background: var(--ink-black); color: var(--bg-paper); }
+        .btn-panel.solid { background: var(--ink-black); color: var(--bg-paper); }
+
+        .module-chip-trigger {
+            background: transparent; border: 1px solid var(--border); color: var(--ink-black);
+            font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+            letter-spacing: 1px; padding: 8px 16px; cursor: pointer; border-radius: 20px;
+            font-weight: bold; outline: none; transition: 0.2s;
+        }
+        .module-chip-trigger.active { background: var(--ink-black); color: var(--bg-paper); border-color: var(--ink-black); }
+
+        .source-badge { 
+            font-size: 9px; text-transform: uppercase; letter-spacing: 1px; 
+            padding: 2px 6px; border-radius: 3px; font-weight: bold; background: var(--ink-black); color: var(--bg-paper);
+        }
+
+        /* --- CALENDAR --- */
+        #calendar-container {
+            flex-grow: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+            overflow-anchor: none; padding-bottom: 150px; position: relative;
+        }
+
+        .sentinel { height: 50px; width: 100%; flex-shrink: 0; }
+        .month-block { padding: 20px 20px 40px 20px; contain: content; }
+        
+        .month-name {
+            font-family: var(--font-serif); font-size: 24px; margin-bottom: 15px; 
+            padding-bottom: 10px; border-bottom: 1px solid var(--border);
+            color: var(--ink-black); text-align: left;
+        }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 8px 2px; }
+        .weekday { font-size: 11px; text-transform: uppercase; opacity: 0.5; margin-bottom: 10px; font-weight: bold; letter-spacing: 1px; }
+
+        .day { height: 44px; width: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; position: relative; border-radius: 50%; margin: 0 auto; transition: 0.2s; color: var(--day-phase-color, var(--ink-black)); }
+        .day.period { background-color: var(--period-red) !important; color: #FFF !important; }
+        .day.selected { color: var(--ink-black) !important; }
+        .day.predicted { border: 1.5px dotted var(--period-red); color: var(--ink-black); border-radius: 50px; }
+        .day.ovulation { border: 1.5px dotted var(--ink-faded); }
+        .day.ovulation::after {
+            content: ''; position: absolute; bottom: 4px; width: 4px; height: 4px;
+            background: var(--ink-black); border-radius: 50%;
+        }
+        
+        .day.selected { font-weight: bold !important; }
+        .day.selected::before { content: ''; position: absolute; bottom: 6px; width: 16px; height: 2px; background-color: var(--ink-black); border-radius: 1px; z-index: 5; }
+        .day.period.selected::before { background-color: #FFF; }
+
+        /* --- BOTTOM SHEET --- */
+        #bottom-sheet {
+            position: fixed; left: 0; right: 0; bottom: 0;
+            background-color: var(--bg-paper); border-top: 1px solid var(--border);
+            z-index: 100; height: 85vh; transform: translateY(calc(100% - 100px)); 
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s ease;
+            display: flex; flex-direction: column; box-shadow: 0 -10px 40px rgba(0,0,0,0.05);
+        }
+        body.dark-mode #bottom-sheet { box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+        #bottom-sheet.open { transform: translateY(0); }
+
+        .sheet-header {
+            padding: 15px 20px; cursor: pointer; flex-shrink: 0;
+            background-color: var(--item-active); border-bottom: 1px solid var(--border);
+        }
+        .drag-bar { width: 30px; height: 4px; background: var(--border); border-radius: 10px; margin: 0 auto 15px auto; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; }
+
+        .cycle-info #header-title { font-family: var(--font-serif); font-size: 24px; line-height: 1; margin: 0; color: var(--ink-black); }
+        .cycle-info span { font-size: 10px; text-transform: uppercase; opacity: 0.5; letter-spacing: 1px; display: block; margin-top: 5px; font-weight: bold; }
+
+        .sheet-body { flex-grow: 1; overflow-y: auto; padding-bottom: 60px; }
+
+        /* --- LIST ITEMS --- */
+        .task-item { padding: 15px 20px; border-bottom: 1px dashed var(--border); display: flex; flex-direction: column; }
+        .task-meta { margin-bottom: 6px; }
+        .task-objective { font-size: 13px; opacity: 0.85; line-height: 1.5; color: var(--ink-black); }
+        .section-header { padding: 20px 20px 10px 20px; font-family: var(--font-serif); font-size: 18px; border-bottom: 1px solid var(--border); background: var(--item-active); margin-top: 10px; }
+
+        /* --- FULL SCREEN OVERLAYS --- */
+        .drawer-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-paper); z-index: 500; display: flex; flex-direction: column;
+            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s ease;
+            padding-top: var(--safe-top);
+        }
+        .drawer-overlay.open { transform: translateY(0); }
+
+        .overlay-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .overlay-scroll-content { padding: 25px 20px; flex-grow: 1; overflow-y: auto; }
+
+        /* --- STATS GRAPH --- */
+        .stats-summary { display: flex; gap: 15px; margin-bottom: 30px; }
+        .stat-box { background: var(--item-active); border: 1px solid var(--border); padding: 15px; border-radius: 6px; flex: 1; text-align: center; }
+        .stat-label { display: block; font-size: 10px; text-transform: uppercase; opacity: 0.5; letter-spacing: 1px; margin-bottom: 5px; }
+        .stat-val { font-family: var(--font-serif); font-size: 24px; color: var(--ink-black); }
+        .graph-scroll-area { flex-grow: 1; overflow-x: auto; overflow-y: hidden; background: var(--item-active); border: 1px solid var(--border); border-radius: 6px; display: block; white-space: nowrap; }
+        
+        .chart-line { fill: none; stroke: var(--ink-black); stroke-width: 2px; }
+        .chart-dot { fill: var(--bg-paper); stroke: var(--ink-black); stroke-width: 2px; }
+        .chart-bar { fill: var(--period-red); opacity: 0.5; rx: 2; } 
+        .chart-label { font-size: 10px; fill: var(--ink-black); opacity: 0.7; text-anchor: middle; font-family: var(--font-mono); font-weight: bold;}
+        .avg-line { stroke: var(--ink-faded); stroke-width: 1px; stroke-dasharray: 2 2; opacity: 0.5; }
+
+        /* --- INPUTS & CHECKBOXES --- */
+        .modal-input { padding: 14px; background: var(--item-active); border: 1px solid var(--border); color: var(--ink-black); border-radius: 6px; font-family: var(--font-mono); font-size: 13px; outline: none; width: 100%; margin-bottom: 15px; }
+        textarea.modal-input { resize: vertical; line-height: 1.4; font-family: var(--font-mono); }
+        .modal-label { font-size: 10px; text-transform: uppercase; opacity: 0.5; letter-spacing: 1px; margin-bottom: 5px; display: block; }
+        .stat-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px; border-bottom: 1px dashed var(--border); padding-bottom: 5px; font-family: var(--font-mono); }
+        
+        .exclusion-row { display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--bg-paper); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; cursor: pointer; }
+        .exclusion-row input { cursor: pointer; width: 16px; height: 16px; accent-color: var(--ink-black); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">Cycle</div>
+        <div class="header-actions">
+            <button class="icon-btn" onclick="toggleTheme()" aria-label="Toggle Theme">
+                <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+            </button>
+            <button class="icon-btn" onclick="jumpToToday()" aria-label="Today">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+            </button>
+            <button class="icon-btn" onclick="toggleOverlay('stats-overlay'); setTimeout(renderStatsGraph, 50);" aria-label="Stats">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </button>
+            <button class="icon-btn" onclick="toggleOverlay('cloud-overlay')" aria-label="Cloud Sync">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <div id="calendar-container">
+        <div id="sentinel-top" class="sentinel"></div>
+        <div id="calendar-content"></div>
+        <div id="sentinel-bottom" class="sentinel"></div>
+    </div>
+
+    <div id="bottom-sheet">
+        <div class="sheet-header" onclick="toggleSheet()">
+            <div class="drag-bar"></div>
+            <div class="header-content">
+                <div class="cycle-info">
+                    <div id="header-title">Day --</div>
+                    <span id="header-sub">NO DATA</span>
+                </div>
+                <button class="module-chip-trigger" id="log-btn" onclick="event.stopPropagation(); toggleEditMode()">LOG PERIOD</button>
+            </div>
+        </div>
+        <div class="sheet-body">
+            <div id="timeline-indicator-area"></div>
+            
+            <div id="filter-chips-container" style="display: flex; gap: 8px; padding: 10px 20px; border-bottom: 1px dashed var(--border); overflow-x: auto; flex-shrink: 0; background: var(--bg-paper);">
+                <button class="module-chip-trigger active" onclick="setDashboardFilter('all', this)" style="padding: 4px 12px; font-size: 9px; border-radius: 4px; letter-spacing: 0.5px;">ALL</button>
+                <button class="module-chip-trigger" onclick="setDashboardFilter('study', this)" style="padding: 4px 12px; font-size: 9px; border-radius: 4px; letter-spacing: 0.5px;">STUDY</button>
+                <button class="module-chip-trigger" onclick="setDashboardFilter('physical', this)" style="padding: 4px 12px; font-size: 9px; border-radius: 4px; letter-spacing: 0.5px;">PHYSICAL</button>
+                <button class="module-chip-trigger" onclick="setDashboardFilter('diet', this)" style="padding: 4px 12px; font-size: 9px; border-radius: 4px; letter-spacing: 0.5px;">DIET</button>
+            </div>
+            
+            <div id="phase-content"></div>
+            <div style="padding: 20px; display: flex; justify-content: center; border-top: 1px dashed var(--border); gap: 10px;">
+                <select id="phase-preview-dropdown" onchange="jumpToPhasePreview(this.value)" style="background: transparent; border: 1px solid var(--ink-black); color: var(--ink-black); padding: 12px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; border-radius: 4px; outline: none; max-width: 150px;">
+                    <option value="" disabled selected>Preview Phase</option>
+                    <option value="menstruation_1">Menstruation 1</option>
+                    <option value="menstruation_2">Menstruation 2</option>
+                    <option value="follicular_1">Follicular 1</option>
+                    <option value="follicular_2">Follicular 2</option>
+                    <option value="ovulation">Ovulation</option>
+                    <option value="luteal_1">Luteal 1</option>
+                    <option value="luteal_2">Luteal 2</option>
+                    <option value="luteal_3">Luteal 3</option>
+                </select>
+                <button class="btn-panel" id="edit-content-btn" onclick="openPhaseEditor()" style="max-width: 200px; margin: 0;">✎ Edit Phase Content</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="phase-editor-overlay" class="drawer-overlay" style="z-index: 600;">
+        <div class="overlay-header">
+            <div class="header-title" id="phase-editor-title">Edit Phase</div>
+            <button class="icon-btn" onclick="toggleOverlay('phase-editor-overlay')" style="font-size: 28px; font-family: var(--font-mono);">×</button>
+        </div>
+        <div class="overlay-scroll-content">
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 11px; opacity: 0.7;">Modify the text for this specific phase.</div>
+                <button class="module-chip-trigger active" onclick="openSchemaEditor()">⚙ Categories</button>
+            </div>
+            <div id="phase-editor-inputs" style="display: flex; flex-direction: column; gap: 15px;"></div>
+            <button class="btn-panel solid" onclick="savePhaseValues()" style="margin-top: 25px;">Save Changes</button>
+        </div>
+    </div>
+
+    <div id="schema-editor-overlay" class="drawer-overlay" style="z-index: 700;">
+        <div class="overlay-header">
+            <div class="header-title">Categories & Tags</div>
+            <button class="icon-btn" onclick="toggleOverlay('schema-editor-overlay')" style="font-size: 28px; font-family: var(--font-mono);">×</button>
+        </div>
+        <div class="overlay-scroll-content">
+            <div id="schema-list" style="display: flex; flex-direction: column; gap: 20px;"></div>
+            <div style="margin-top: 30px; border-top: 1px dashed var(--border); padding-top: 20px;">
+                <div class="modal-label" style="margin-bottom: 10px;">ADD NEW CATEGORY</div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-cat-name" class="modal-input" placeholder="e.g., Supplements" style="margin:0;">
+                    <button class="btn-panel solid" style="width: auto;" onclick="createNewCategory()">ADD</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="stats-overlay" class="drawer-overlay">
+        <div class="overlay-header">
+            <div class="header-title">Analytics</div>
+            <button class="icon-btn" onclick="toggleOverlay('stats-overlay')" style="font-size: 28px; font-family: var(--font-mono);">×</button>
+        </div>
+        <div class="overlay-scroll-content" style="display: flex; flex-direction: column;">
+            <div class="stats-summary">
+                <div class="stat-box">
+                    <span class="stat-label">Avg Cycle</span>
+                    <span class="stat-val" id="stat-avg-cycle">--</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Avg Bleed</span>
+                    <span class="stat-val" id="stat-avg-period">--</span>
+                </div>
+            </div>
+            <div class="graph-scroll-area" id="graph-wrapper" style="min-height: 260px;"></div>
+            <div id="outlier-exclusion-wrapper" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <div id="cloud-overlay" class="drawer-overlay">
+        <div class="overlay-header">
+            <div class="header-title">Backup & Export</div>
+            <button class="icon-btn" onclick="toggleOverlay('cloud-overlay')" style="font-size: 28px; font-family: var(--font-mono);">×</button>
+        </div>
+        <div class="overlay-scroll-content">
+            <div style="margin-bottom:20px; font-size:12px; opacity:0.7; line-height: 1.5;">
+                <b>CLOUD STORAGE:</b> Paste your API Key & Bin ID to maintain dynamic Multi-device network backups.
+            </div>
+            
+            <label class="modal-label">API KEY (Master Key)</label>
+            <input type="text" id="inp-api-key" class="modal-input">
+
+            <label class="modal-label">BIN ID (Leave empty to create new)</label>
+            <input type="text" id="inp-bin-id" class="modal-input">
+            
+            <div style="display:flex; gap:10px; margin-bottom:25px; margin-top: 10px;">
+                <button class="btn-panel solid" id="btn-create" onclick="initCloud()">Link / Create</button>
+                <button class="btn-panel" id="btn-restore" onclick="restoreFromCloud()">Restore</button>
+            </div>
+            
+            <div style="border-top:1px dashed var(--border); padding-top:20px; margin-bottom: 25px;">
+                <label class="modal-label">Offline File Database Backup</label>
+                <div style="display:flex; gap:10px; margin-top: 8px;">
+                    <button class="btn-panel" onclick="exportProgress()">Export JSON</button>
+                    <button class="btn-panel" onclick="importProgress()">Import JSON</button>
+                </div>
+            </div>
+
+            <div style="border-top:1px dashed var(--border); padding-top:20px; margin-bottom: 10px;">
+                <label class="modal-label">Medical Review Spreadsheet Records</label>
+                <div style="display:flex; gap:10px; margin-top: 8px;">
+                    <button class="btn-panel solid" onclick="exportToCSV()">Export CSV Sheet</button>
+                    <button class="btn-panel solid" onclick="exportToMarkdown()">Export MD Report</button>
+                </div>
+            </div>
+            
+            <div style="margin-top:30px; border-top:1px dashed var(--border); padding-top:20px; display:none;" id="cloud-status-area">
+                <div class="stat-row"><span>STATUS</span><span id="cloud-status-txt" style="color: var(--period-red); font-weight: bold;">OFFLINE</span></div>
+                <div class="stat-row"><span>BIN ID</span><span id="cloud-bin-id">-</span></div>
+                <div class="stat-row"><span>LAST SYNC</span><span id="cloud-last-sync">-</span></div>
+                <button class="btn-panel" style="margin-top:20px;" onclick="syncToCloud()">Force Save Now</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    /* =========================================================================
+       HEADLESS CMS DATA ENGINE STRUCTURES
+       ========================================================================= */
+
+    const defaultSchema = [
+        { id: "cat_status", title: "Status", tags: [ {id: "t_mood", label: "Mood"}, {id: "t_energy", label: "Energy"}, {id: "t_state", label: "State"}, {id: "t_risk", label: "Risk"} ] },
+        { id: "cat_body", title: "Body", tags: [ {id: "t_internal", label: "Internal"}, {id: "t_external", label: "External"} ] },
+        { id: "cat_nutrition", title: "Nutrition", tags: [ {id: "t_goal", label: "Goal"}, {id: "t_protein", label: "Proteins"}, {id: "t_carbs", label: "Carbs"}, {id: "t_veg", label: "Veg & Pulses"}, {id: "t_snacks", label: "Snacks"}, {id: "t_drinks", label: "Drinks"} ] },
+        { id: "cat_phys", title: "Physical", tags: [ {id: "t_p_goal", label: "Goal"}, {id: "t_p_commute", label: "Commute"}, {id: "t_p_exercise", label: "Exercises"} ] },
+        { id: "cat_acad", title: "Academics", tags: [ {id: "t_a_goal", label: "Goal"}, {id: "t_a_maths", label: "Maths"}, {id: "t_a_graphics", label: "Graphics"}, {id: "t_a_chem", label: "Chemistry"}, {id: "t_a_python", label: "Python"}, {id: "t_a_autocad", label: "AutoCAD"}, {id: "t_a_french", label: "French"} ] },
+        { id: "cat_hobbies", title: "Hobbies & Care", tags: [ {id: "t_h_cars", label: "Cars"}, {id: "t_h_drawing", label: "Drawing"}, {id: "t_h_substack", label: "Substack"}, {id: "t_c_skin", label: "Skin"}, {id: "t_c_hair", label: "Hair"}, {id: "t_c_body", label: "Bodycare"} ] }
+    ];
+
+    const defaultValues = {
+        menstruation_1: {
+            title: "Phase: Menstruation (Part 1)", vibe: "Slow and heavy. Operating on 'Battery Saver Mode'. Functional enough, but efficient movement is key.", action: "Isolate. Earphones in on the bus. Do not engage in arguments.", priorities: "Sleep (10 PM), Hydration, Pain Management.",
+            t_mood: "Introspective, low social tolerance ('Bunker Mode'), irritable.", t_energy: "Low (10-30%). Physical stamina is compromised.", t_state: "Fragile.", t_risk: "Spiraling thoughts (Everything is wrong).",
+            t_internal: "Estrogen and Progesterone bottom out. Iron levels drop due to blood loss. Prostaglandins are released to contract the uterus.", t_external: "Body temperature drops. Feels colder internally. Skin is dehydrated and the barrier is weak. Scalp gets greasy quickly (hormonal crash), but hair ends are brittle.",
+            t_goal: "Anti-inflammatory & iron loading.", t_protein: "Liver / Organ Meat (Best source of Heme Iron), Mutton/Beef Curry (Cooked soft, avoid dry fry), or Boiled Eggs (2 eggs for fast breakfast).", t_carbs: "Soft Rice (Easier digestion), Rice Bhakri (Gluten-free, reduces bloating), or Oats.", t_veg: "Moong Dal Khichdi (Easy on the gut), Cooked Spinach/Methi (Must be cooked), Beetroot (Boiled).", t_snacks: "Dates (2-3 pieces non-negotiable), Jaggery & Roasted Chana, Dark Chocolate (Magnesium for cramps).", t_drinks: "Ginger Tea (No sugar, natural painkiller), Warm Water (Sip constantly; cold water = more cramps).",
+            t_p_goal: "Release pelvic tension without standing.", t_p_commute: "Keep knees soft(micro-bent) while standing on the bus to reduce lower back strain.", t_p_exercise: "Reclined Butterfly. Legs-Up-The-Wall. Knee Hugs.",
+            t_a_goal: "Passive Consumption.", t_a_maths: "Skip.", t_a_graphics: "Just look at 3D models/photos.", t_a_chem: "Watch visualization videos of concepts.", t_a_python: "Skip.", t_a_autocad: "Watch a YouTube tutorial of someone else drawing. Passive absorption.", t_a_french: "Passive Listening. Podcast/Audio while lying in bed.",
+            t_h_cars: "Tech Talks. Watch videos on F1 engines.", t_h_drawing: "Scribbling. Pen to paper, random shapes. No structure.", t_h_substack: "None.", t_c_skin: "Protection. Water wash only (AM) → Lotion. Vaseline Glaze at night (Essential for Red Spots). No actives (acids/scrubs).", t_c_hair: "No Wash. Wet hair = cold head = cramps. Wear a loose braid or low bun.", t_c_body: "Wear loose pants (no tight elastic on stomach)."
+        },
+        menstruation_2: {
+            title: "Phase: Menstruation (Part 2)", vibe: "Cleaner. The fog lifts. There's a sudden urge to organize your surroundings.", action: "Pick only 3 top priorities for the next week.", priorities: "Plan Phase 2 deadlines, Hygiene reset.",
+            t_mood: "Rational, calm, planning-oriented.", t_energy: "Recovering (40% → 60%).", t_state: "Stable.", t_risk: "Over-planning (making to-do lists that are too long).",
+            t_internal: "Bleeding slows/stops. Estrogen begins to climb. Brain logic centers reactivate.", t_external: "Body temperature normalises. Hydration returns.",
+            t_goal: "Building blocks.", t_protein: "Chicken Curry (Spice tolerance returns), Egg Bhurji (With onions/coriander), Mixed Dal (Heavier protein).", t_carbs: "Jowar/Bajra Bhakri (Complex carbs), Wheat Roti/Lachha Paratha (Digestion is normal).", t_veg: "Flower (Cauliflower) / Cabbage (Cooked), Carrots (Raw or cooked).", t_snacks: "Oranges/Mosambi (Vitamin C), Yogurt/Curd (Probiotics), Sesame Seeds (Til) (Start Day 4: 1 yellow scoop/day).", t_drinks: "Regular Water",
+            t_p_goal: "Fix posture and wake up muscles.", t_p_commute: "Walk fast during the 10-minute walk to generate heat.", t_p_exercise: "Wall angels. Glute bridges.",
+            t_a_goal: "Output Mode.", t_a_maths: "Formula Sheet. Write down all formulas. Categorize them.", t_a_graphics: "Freehand Sketching. Practice lines/circles.", t_a_chem: "Flowcharts. Draw reaction mechanisms.", t_a_python: "Dry Run. Read code, trace output mentally.", t_a_autocad: "Make a cheat sheet of shortcuts. Learn through lists.", t_a_french: "Vocab Review. Flashcards of old words.",
+            t_h_cars: "Diagramming. Sketch a component (e.g., braking system).", t_h_drawing: "Perspective. Practice straight lines/boxes.", t_h_substack: "Edits. Read old drafts, fix typos.", t_c_skin: "Reset. Gentle Cleanser → Lotion. Lighter Vaseline layer at night.", t_c_hair: "Wash Day. Double shampoo to remove Stage 1.1 grease. Condition ends. Dry completely before sleep.", t_c_body: "Change bedsheets (sweat removal)."
+        },
+        follicular_1: {
+            title: "Phase: Follicular (Part 1)", vibe: "Optimistic and lighter. The heavy feeling of the period is gone. A sudden urge to get your life together.", action: "Say No to at least one low-priority social plan.", priorities: "Deep Clean digital files, Reconnect with friends, Start new study modules.",
+            t_mood: "Curious, open, and less judgmental. Interested in the world again.", t_energy: "Climbing (50% → 75%). Steady, consistent stamina.", t_state: "Stable. Low anxiety.", t_risk: "Overcommitting. You feel so good you might say Yes to every plan.",
+            t_internal: "Estrogen starts rising. FSH stimulates ovaries. Insulin sensitive now.", t_external: "Body temperature is cool/normal. Heat tolerance is decent.",
+            t_goal: "Gut health & fresh fuel.", t_protein: "Yogurt / Curd / Buttermilk, Moong Dal, Chicken Stew, Egg Whites.", t_carbs: "Idli / Dosa / Uttapam, Poha, Rice Bhakri.", t_veg: "Carrots / Cucumber, Green Beans, Leafy Greens.", t_snacks: "Flax Seeds, Pumpkin Seeds, Fruit Salad.", t_drinks: "Lemon Water, Coconut Water",
+            t_p_goal: "Rebuild stamina and Cardio.", t_p_commute: "Walk briskly (Power walk) during the 10-minute college walk. Don't stroll.", t_p_exercise: "High Knees. Stair Climbing. Surya Namaskar.",
+            t_a_goal: "Input Mode", t_a_maths: "New Theorems. Understand the derivation.", t_a_graphics: "Concept Mastery. Read theory. Watch 3D video.", t_a_chem: "Tackle the Boring Stuff. Read chapters on mechanisms.", t_a_python: "Learn Syntax. Memorize rules/logic.", t_a_autocad: "Learn a new command or toolbar.", t_a_french: "Vocabulary Loading. Learn 20 new words/day.",
+            t_h_cars: "Technical Reading. Read articles on aerodynamics.", t_h_drawing: "Anatomy/Structure. Draw wireframes.", t_h_substack: "Research. Read other writers.", t_c_skin: "Exfoliation Window. Use a gentle scrub or BHA.", t_c_hair: "Growth Phase / Oiling. Massage scalp with Almond oil.", t_c_body: "Hair Removal. Pain tolerance is highest."
+        },
+        follicular_2: {
+            title: "Phase: Follicular (Part 2)", vibe: "Fast-paced.", action: "24-Hour Rule: Wait a day before buying anything expensive.", priorities: "Pitch ideas, Hard conversations, Scary academic subjects.",
+            t_mood: "Confident, slightly competitive, energized.", t_energy: "Peaking (90% → 100%). High physical drive.", t_state: "Resilient. Criticism rolls off your back.", t_risk: "Impulsivity. Buying things or saying rude things because you feel invincible.",
+            t_internal: "Estrogen peaks. Testosterone enters. LH prepares to surge.", t_external: "Body temperature is normal. Skin oil production increases slightly.",
+            t_goal: "Muscle Fuel & Fiber", t_protein: "Chicken / Meat, Whole Eggs, Sprouts.", t_carbs: "Jowar Bhakri, Rice, Sweet Potato.", t_veg: "Cruciferous Veggies (Cabbage, Cauliflower), Raw Salads.", t_snacks: "Pumpkin Seeds, Roasted Chana / Peanuts.", t_drinks: "Buttermilk (Chaas), Sabja Water.",
+            t_p_goal: "Strength & Power.", t_p_commute: "Stand without holding the bar (surf the bus) to engage core stability.", t_p_exercise: "Pushups, Deep Squats, Plank hold.",
+            t_a_goal: "Output Mode.", t_a_maths: "Speed Solving. Set a timer.", t_a_graphics: "Visualization. Solve projection problems in your head.", t_a_chem: "Reaction Speed. Practice equations.", t_a_python: "Coding Projects. Write full modules.", t_a_autocad: "Draw fast using only keyboard shortcuts.", t_a_french: "Speaking. Talk to yourself.",
+            t_h_cars: "Watch Racing. Analyze strategy.", t_h_drawing: "Imagination. Create something new.", t_h_substack: "Publishing. Best time to hit Post.", t_c_skin: "Oil Control. Clay Mask (Multani Mitti).", t_c_hair: "Styling. Hair looks its best.", t_c_body: "Sweat Management. Wear breathable cotton."
+        },
+        ovulation: {
+            title: "Phase: Ovulation", vibe: "Effortless. The friction of daily life disappears.", action: "Write down the single most important task and refuse to do anything else until it's done.", priorities: "Socialize/Networking, Permissions/Favours, Hardest Academic Task.",
+            t_mood: "Highly social, assertive, and slightly impulsive.", t_energy: "Peaked (100%). Surplus energy.", t_state: "Invincible.", t_risk: "Distraction. Starting 5 projects and finishing none.",
+            t_internal: "Estrogen highest. LH surges. Testosterone spikes. Ligaments looser.", t_external: "Body temp RISES. High risk for Heat Bumps. Skin oily.",
+            t_goal: "Cooling & Detox", t_protein: "Chicken (Grilled), Egg Whites, Sprouts.", t_carbs: "Jowar Bhakri, Rice, Oats.", t_veg: "Raw Cabbage / Cauliflower, Cucumber, Bottle Gourd.", t_snacks: "Water-rich Fruits, Pumpkin Seeds.", t_drinks: "Sabja Seeds, Buttermilk, Coconut Water.",
+            t_p_goal: "Max Power & Heat Management.", t_p_commute: "The Race. Walk your route as fast as physically possible.", t_p_exercise: "Squat Jumps, Pushups to failure. Careful with knees.",
+            t_a_goal: "Performance Mode.", t_a_maths: "Timed Sprints. Race the clock.", t_a_graphics: "Visualization. Rotate 3D objects in your mind.", t_a_chem: "Teaching. Explain a reaction out loud.", t_a_python: "Hackathon Mode. Code a full module.", t_a_autocad: "Attempt the hardest assignment.", t_a_french: "Conversation. Record yourself.",
+            t_h_cars: "Strategy Analysis.", t_h_drawing: "Gesture Drawing. 30s timer.", t_h_substack: "The Pitch. Write a bold opinion piece.", t_c_skin: "Deep Clean. Double Cleanse. Clay Mask.", t_c_hair: "Volume. Scalp oily fast.", t_c_body: "Sweat Management. Cotton. Roll-on deo."
+        },
+        luteal_1: {
+            title: "Phase: Luteal (Part 1)", vibe: "Grounded. The high of ovulation fades, replaced by a calm, serious energy.", action: "Declutter. Clean your phone. Organize files.", priorities: "Solo Study Sessions, Organization, Complex Code Debugging.",
+            t_mood: "Stable, detail-oriented, no-nonsense.", t_energy: "Stable (80%). Steady and reliable.", t_state: "Grounded.", t_risk: "Perfectionism. Getting stuck on small details.",
+            t_internal: "Progesterone rises (natural sedative). Brain spots errors better.", t_external: "Body temp starts rising slowly. Oil production creeps up.",
+            t_goal: "Blood Sugar Stability", t_protein: "Chicken/Meat, Chickpeas / Rajma, Paneer.", t_carbs: "Sweet Potato (Holy grail), Brown Rice, Oats.", t_veg: "Carrots/Beetroot, Pumpkin.", t_snacks: "Sesame Seeds, Sunflower Seeds, Apple & peanut butter.", t_drinks: "Chamomile / Green Tea.",
+            t_p_goal: "Maintain muscle, avoid high stress.", t_p_commute: "Standard pace walking. Listen to a podcast.", t_p_exercise: "Slow Strength. Time under tension.",
+            t_a_goal: "Deep Work / Debugging.", t_a_maths: "Practice Sets. Repetitive calculus problems.", t_a_graphics: "Precision Drawing. Exact measurements.", t_a_chem: "Review. Read notes.", t_a_python: "Debugging. Find syntax errors.", t_a_autocad: "Dimensioning. Align perfectly.", t_a_french: "Grammar Rules. Conjugation tables.",
+            t_h_cars: "Technical Specs.", t_h_drawing: "Inking/Lining.", t_h_substack: "Editing. Refine drafts.", t_c_skin: "Pore Defense. Niacinamide or wash face after sweat.", t_c_hair: "Scalp Massage.", t_c_body: "Breathability. Stick to cotton."
+        },
+        luteal_2: {
+            title: "Phase: Luteal (Part 2)", vibe: "Sticky. Feels hotter, heavier, and easily annoyed.", action: "Solo time.", priorities: "Cooling the body, Feeding the hunger (healthily), Routine tasks.",
+            t_mood: "Irritable.", t_energy: "Fading (60-70%). You tire faster.", t_state: "Agitated.", t_risk: "Snapping at people.",
+            t_internal: "Progesterone peaks. Metabolism PEAKS (burn extra calories). Water retention.", t_external: "MAX HEAT. Danger zone for heat bumps. Sebum thickens.",
+            t_goal: "Volume & Cooling", t_protein: "Double Portion. Extra piece of chicken/dal.", t_carbs: "Rice, Banana (Potassium).", t_veg: "Cucumber, Bottle Gourd (Dudhi).", t_snacks: "Dark Chocolate, Roasted Chana, Popcorn.", t_drinks: "Buttermilk, Sabja Water.",
+            t_p_goal: "Move without spiking Cortisol.", t_p_commute: "Walk at a relaxed pace. Don't rush.", t_p_exercise: "Yoga. Wall Sits.",
+            t_a_goal: "Routine Mode.", t_a_maths: "Solved Examples. Read logic.", t_a_graphics: "Repetitive Drafting.", t_a_chem: "Review Notes.", t_a_python: "Video Tutorials.", t_a_autocad: "2D floor plans or simple views.", t_a_french: "Listening. Music/movies.",
+            t_h_cars: "Documentaries.", t_h_drawing: "Coloring/Shading.", t_h_substack: "None.", t_c_skin: "Acne Defense. Clay Mask to suck out thick oil.", t_c_hair: "Grease Control. Wash more often.", t_c_body: "Cooling. Prickly Heat powder."
+        },
+        luteal_3: {
+            title: "Phase: Luteal (Part 3)", vibe: "Wrong and hostile.", action: "Do not make big life choices.", priorities: "Sleep (9 hours), Emotional regulation, Comfort.",
+            t_mood: "Anxious, critical, weepy, or numb (PMS).", t_energy: "Exhausted.", t_state: "Unstable.", t_risk: "Deciding you are ugly/failing/hated.",
+            t_internal: "Estrogen and Progesterone crash. Serotonin drops. Cramping starts.", t_external: "Body temp drops. Face puffy. Inflammation high.",
+            t_goal: "Comfort & Magnesium (Avoid salt)", t_protein: "Comfort food.", t_carbs: "Khichdi, Toast.", t_veg: "Spinach (Magnesium).", t_snacks: "Dark Chocolate, Almonds, Banana.", t_drinks: "Warm Water",
+            t_p_goal: "Mental Sanity.", t_p_commute: "Earphones in. Disassociate.", t_p_exercise: "Stretching lower back/hips. Sleep.",
+            t_a_goal: "Minimum Viable Effort.", t_a_maths: "Bare minimum.", t_a_graphics: "Bare minimum.", t_a_chem: "Bare minimum.", t_a_python: "Bare minimum.", t_a_autocad: "Organise files. Don't draw.", t_a_french: "Watch a show.",
+            t_h_cars: "None.", t_h_drawing: "None.", t_h_substack: "Rant in private doc. Do not publish.", t_c_skin: "Barrier Protection. Vaseline slugging. Don't touch spots.", t_c_hair: "Scalp Relief. Loose styles.", t_c_body: "Comfort. Loose waistbands."
+        }
+    };
+
+    let phaseSchema = JSON.parse(localStorage.getItem('cycle_schema')) || defaultSchema;
+    let phaseValues = JSON.parse(localStorage.getItem('cycle_values')) || defaultValues;
+    let excludedCycles = JSON.parse(localStorage.getItem('cycle_excluded_cycles')) || [];
+
+    // STATE CONTROLLERS
+    let loggedDates = JSON.parse(localStorage.getItem('dates')) || [];
+    let isEditMode = false;
+    let today = new Date();
+    let viewDate = new Date(); 
+    let currentActivePhaseKey = 'menstruation_1'; 
+    let currentDashboardFilter = 'all'; 
+    let cloudConfig = JSON.parse(localStorage.getItem('cycle_cloud_config')) || { apiKey: '', binId: '' };
+    let syncTimer = null;
+    let topDate, bottomDate;
+    
+    const DEFAULT_CYCLE = 28, DEFAULT_PERIOD = 5;
+
+    const phaseColors = {
+        'menstruation_1': 'var(--color-m1)', 'menstruation_2': 'var(--color-m2)',
+        'follicular_1': 'var(--color-f1)', 'follicular_2': 'var(--color-f2)',
+        'ovulation': 'var(--color-ov)',
+        'luteal_1': 'var(--color-l1)', 'luteal_2': 'var(--color-l2)', 'luteal_3': 'var(--color-l3)'
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+        resetDatesToToday();
+        renderInitialRange();
+        updateDashboard();
+        setupObservers();
+        checkCloudStatus();
+        setTimeout(() => { scrollToElement('.day.today', 'auto'); }, 100);
+    });
+
+    /* --- DATE MATH & INTERPOLATION SYSTEMS --- */
+    function resetDatesToToday() {
+        today = new Date();
+        topDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+        bottomDate = new Date(today.getFullYear(), today.getMonth() + 3, 1);
+    }
+    function jumpToToday() { 
+        viewDate = new Date(); resetDatesToToday(); 
+        document.getElementById('calendar-content').innerHTML = ''; 
+        renderInitialRange(); updateDashboard();
+        setTimeout(() => scrollToElement('.day.today', 'auto'), 50); 
+    } 
+    function scrollToElement(sel, behavior = 'smooth') { const el = document.querySelector(sel); if(el) el.scrollIntoView({block: "center", behavior}); }
+
+    /* --- REFINEMENT: VARIABILITY TRACKER & OUTLIER EXCLUSION --- */
+    function getCycleStats() {
+        if (loggedDates.length === 0) return { avgCycle: DEFAULT_CYCLE, avgPeriod: DEFAULT_PERIOD, lastStart: null, cycleDev: 0, rawCycles: [] };
+        const sorted = [...loggedDates].sort();
+        let starts = [], currentRun = [sorted[0]], periodLengths = [];
+        
+        for(let i=1; i<sorted.length; i++) {
+            if ((new Date(sorted[i]) - new Date(sorted[i-1]))/86400000 > 2) {
+                starts.push(currentRun[0]); periodLengths.push(currentRun.length); currentRun = [];
+            }
+            currentRun.push(sorted[i]);
+        }
+        starts.push(currentRun[0]); periodLengths.push(currentRun.length);
+        const lastStart = new Date(starts[starts.length-1]);
+        
+        let cycleLengths = [];
+        let rawCycles = [];
+        
+        for(let i=0; i < starts.length; i++) {
+            let len = 0;
+            if (i < starts.length - 1) len = Math.ceil((new Date(starts[i+1]) - new Date(starts[i])) / 86400000);
+            const isExcluded = excludedCycles.includes(starts[i]);
+            
+            rawCycles.push({ start: starts[i], periodLen: periodLengths[i], cycleLen: len, isExcluded });
+            if (len > 20 && len < 45 && !isExcluded) cycleLengths.push(len);
+        }
+        
+        const cycleCount = cycleLengths.length;
+        const avgCycle = cycleCount > 0 ? Math.round(cycleLengths.reduce((a,b)=>a+b,0) / cycleCount) : DEFAULT_CYCLE;
+        
+        let validPeriods = [];
+        for(let i=0; i<starts.length; i++) { if(!excludedCycles.includes(starts[i])) validPeriods.push(periodLengths[i]); }
+        const avgPeriod = validPeriods.length > 0 ? Math.round(validPeriods.reduce((a,b)=>a+b,0) / validPeriods.length) : DEFAULT_PERIOD;
+
+        let cycleDev = 0;
+        if (cycleCount > 1) {
+            const variance = cycleLengths.reduce((sum, len) => sum + Math.pow(len - avgCycle, 2), 0) / cycleCount;
+            cycleDev = Math.sqrt(variance);
+        }
+        return { avgCycle, avgPeriod, lastStart, cycleDev, rawCycles };
+    }
+
+    function getPhaseKey(cycleDay, cycleLength, periodLength) {
+        if (cycleDay <= periodLength) return (cycleDay <= Math.max(1, Math.floor(periodLength * 0.4))) ? 'menstruation_1' : 'menstruation_2';
+        const ovDay = cycleLength - 14;
+        if (cycleDay >= ovDay - 1 && cycleDay <= ovDay + 1) return 'ovulation';
+        if (cycleDay > periodLength && cycleDay < ovDay - 1) {
+            const midPoint = (periodLength + 1) + Math.floor(((ovDay - 2) - (periodLength + 1) + 1) / 2);
+            return (cycleDay <= midPoint) ? 'follicular_1' : 'follicular_2';
+        }
+        if (cycleDay > ovDay + 1) {
+            const lutStart = ovDay + 2;
+            if (cycleDay >= cycleLength - 2) return 'luteal_3';
+            const focusDays = Math.ceil(((cycleLength - 3) - lutStart + 1) * 0.6);
+            return (cycleDay < lutStart + focusDays) ? 'luteal_1' : 'luteal_2';
+        }
+        return 'luteal_3'; 
+    }
+
+    function getPredictionType(dateStr, stats) {
+        if (!stats.lastStart) return null;
+        const diffDays = Math.round((new Date(dateStr) - stats.lastStart) / 86400000);
+        if (diffDays <= 0) return null;
+        const cycleDay = (diffDays % stats.avgCycle) + 1; 
+        if (cycleDay <= stats.avgPeriod) return 'period';
+        if (cycleDay === stats.avgCycle - 14) return 'ovulation';
+        return null;
+    }
+
+    function renderTimelineTrack(cycleDay, stats) {
+        const container = document.getElementById('timeline-indicator-area');
+        if (!container || !stats.lastStart) return;
+
+        let segments = [];
+        let prevKey = getPhaseKey(1, stats.avgCycle, stats.avgPeriod);
+        let currentSeg = { key: prevKey, count: 1 };
+        
+        for (let d = 2; d <= stats.avgCycle; d++) {
+            let k = getPhaseKey(d, stats.avgCycle, stats.avgPeriod);
+            if (k === prevKey) currentSeg.count++;
+            else { segments.push(currentSeg); currentSeg = { key: k, count: 1 }; prevKey = k; }
+        }
+        segments.push(currentSeg);
+        
+        let barHtml = `<div style="position: relative; width: 100%; height: 8px; background: var(--border); border-radius: 4px; display: flex; overflow: hidden; margin-bottom: 8px;">`;
+        segments.forEach(seg => {
+            barHtml += `<div style="width: ${(seg.count / stats.avgCycle) * 100}%; height: 100%; background: ${phaseColors[seg.key]};"></div>`;
+        });
+        
+        const pointerPercent = ((cycleDay - 0.5) / stats.avgCycle) * 100;
+        barHtml += `<div style="position: absolute; top: -2px; left: calc(${pointerPercent}% - 3px); width: 6px; height: 12px; background: var(--ink-black); border-radius: 2px; border: 1px solid var(--bg-paper);"></div></div>`;
+        
+        const currentKey = getPhaseKey(cycleDay, stats.avgCycle, stats.avgPeriod);
+        let daysLeft = 0, checkDay = cycleDay + 1, nextPhaseTitle = "";
+        
+        while (checkDay <= stats.avgCycle * 2) {
+            let lookDay = checkDay > stats.avgCycle ? (checkDay - 1) % stats.avgCycle + 1 : checkDay;
+            if (getPhaseKey(lookDay, stats.avgCycle, stats.avgPeriod) !== currentKey) {
+                daysLeft = checkDay - cycleDay;
+                nextPhaseTitle = phaseValues[getPhaseKey(lookDay, stats.avgCycle, stats.avgPeriod)].title.replace("Phase: ", "");
+                break;
+            }
+            checkDay++;
+        }
+        
+        container.innerHTML = `
+            <div style="padding: 15px 20px 10px 20px; border-bottom: 1px dashed var(--border); background: var(--bg-paper);">
+                ${barHtml}
+                <div style="font-size: 11px; font-family: var(--font-mono); opacity: 0.7; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between;">
+                    <span>Cycle Day ${cycleDay} / ${stats.avgCycle}</span>
+                    <span style="color:var(--period-red);">${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to ${nextPhaseTitle}</span>
+                </div>
+            </div>`;
+    }
+
+    /* --- CONTEXT FILTER CONTROLLER CHIPS --- */
+    function setDashboardFilter(filter, btn) {
+        currentDashboardFilter = filter;
+        document.querySelectorAll('#filter-chips-container .module-chip-trigger').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateDashboard();
+    }
+
+    /* --- DASHBOARD VIEW CONTROLLER --- */
+    function buildSectionHTML(title, items) {
+        let html = `<div class="section-header">${title}</div>`;
+        items.forEach(item => { html += `<div class="task-item"><div class="task-meta"><span class="source-badge">${item.l}</span></div><div class="task-objective">${item.v}</div></div>`; });
+        return html;
+    }
+
+    function updateDashboard() {
+        const stats = getCycleStats();
+        if (!stats.lastStart) {
+            document.getElementById('header-title').innerText = "Day --"; document.getElementById('header-sub').innerText = "NO DATA"; 
+            document.getElementById('edit-content-btn').style.display = "none"; document.getElementById('timeline-indicator-area').innerHTML = '';
+            document.getElementById('phase-content').innerHTML = `<div style="padding: 40px; text-align: center; opacity: 0.5; font-size: 13px;">Log a period to unlock insights.</div>`;
+            return;
+        }
+
+        const target = new Date(viewDate); target.setHours(0,0,0,0);
+        const start = new Date(stats.lastStart); start.setHours(0,0,0,0);
+        let diffDays = Math.floor((target - start) / 86400000);
+        let cycleDay = diffDays >= 0 ? (diffDays % stats.avgCycle) + 1 : stats.avgCycle - (Math.abs(diffDays) % stats.avgCycle) + 1;
+        if(cycleDay > stats.avgCycle) cycleDay = 1;
+
+        currentActivePhaseKey = getPhaseKey(cycleDay, stats.avgCycle, stats.avgPeriod);
+        renderPhaseData(currentActivePhaseKey, cycleDay, target, false, stats);
+    }
+
+    function renderPhaseData(phaseKey, cycleDay, dateObject, isPreviewMode = false, stats = null) {
+        if (!stats) stats = getCycleStats();
+        const data = phaseValues[phaseKey];
+
+        if (isPreviewMode) {
+            document.getElementById('header-title').innerHTML = `${phaseKey.replace('_', ' ').toUpperCase()} <span style="font-size: 12px; opacity: 0.4; margin-left: 8px; font-family: var(--font-mono); font-weight: bold; text-transform: uppercase;">Preview</span>`;
+            for (let d = 1; d <= stats.avgCycle; d++) { if (getPhaseKey(d, stats.avgCycle, stats.avgPeriod) === phaseKey) { cycleDay = d; break; } }
+        } else {
+            const isToday = dateObject.toDateString() === new Date().toDateString();
+            document.getElementById('header-title').innerHTML = `Day ${cycleDay} <span style="font-size: 12px; opacity: 0.4; margin-left: 8px; font-family: var(--font-mono); font-weight: bold; text-transform: uppercase;">${isToday ? 'Today' : dateObject.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>`;
+        }
+
+        document.getElementById('header-sub').innerText = data.title.replace("Phase: ", "");
+        document.getElementById('edit-content-btn').style.display = "inline-block";
+        renderTimelineTrack(cycleDay, stats);
+
+        let html = `<div style="padding: 20px;"><div style="font-size: 14px; opacity: 0.85; line-height: 1.5;">${data.vibe || ''}</div></div>`;
+        
+        phaseSchema.forEach(category => {
+            let matchesFilter = currentDashboardFilter === 'all' || 
+                (currentDashboardFilter === 'study' && (category.id === 'cat_acad' || category.id === 'cat_hobbies')) ||
+                (currentDashboardFilter === 'physical' && (category.id === 'cat_phys' || category.id === 'cat_body' || category.id === 'cat_status')) ||
+                (currentDashboardFilter === 'diet' && category.id === 'cat_nutrition');
+
+            if (!matchesFilter) return;
+            let items = category.tags.map(t => ({ l: t.label, v: data[t.id] || "" })).filter(i => i.v && i.v !== "None.");
+            if (items.length > 0) html += buildSectionHTML(category.title, items);
+        });
+
+        if (data.priorities || data.action) {
+            html += `<div style="padding: 25px 20px; background: var(--item-active); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">`;
+            if (data.priorities) html += `<div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5; margin-bottom: 8px; font-weight: bold;">Top Priorities</div><div style="font-family: var(--font-serif); font-size: 18px; line-height: 1.3;">${data.priorities}</div>`;
+            html += `</div>`;
+            if (data.action) html += `<div style="padding: 20px; text-align: center; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--border);"><span style="opacity: 0.5;">Action:</span> <b>${data.action}</b></div>`;
+        }
+        document.getElementById('phase-content').innerHTML = html;
+    }
+
+    function jumpToPhasePreview(phaseKey) { if (phaseKey) { currentActivePhaseKey = phaseKey; renderPhaseData(phaseKey, null, null, true, null); document.getElementById('phase-preview-dropdown').value = ""; } }
+
+    /* --- PHASE CONTENT SCHEMA EDITORS --- */
+    function openPhaseEditor() {
+        const container = document.getElementById('phase-editor-inputs');
+        const data = phaseValues[currentActivePhaseKey];
+        document.getElementById('phase-editor-title').innerText = data.title.replace("Phase: ", "");
+        container.innerHTML = `
+            <div style="font-family: var(--font-serif); font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">Base Overviews</div>
+            <label class="modal-label">The Vibe</label><textarea id="val_vibe" class="modal-input" rows="3">${data.vibe || ""}</textarea>
+            <label class="modal-label">Priorities</label><input type="text" id="val_priorities" class="modal-input" value="${data.priorities || ""}">
+            <label class="modal-label">Action</label><input type="text" id="val_action" class="modal-input" value="${data.action || ""}">
+        `;
+        phaseSchema.forEach(cat => {
+            if (cat.tags.length === 0) return;
+            container.innerHTML += `<div style="font-family: var(--font-serif); font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin: 15px 0 10px 0;">${cat.title}</div>`;
+            cat.tags.forEach(tag => { container.innerHTML += `<label class="modal-label">${tag.label}</label><textarea id="val_${tag.id}" class="modal-input" rows="2">${data[tag.id] || ""}</textarea>`; });
+        });
+        toggleOverlay('phase-editor-overlay');
+    }
+
+    function savePhaseValues() {
+        let newData = { title: phaseValues[currentActivePhaseKey].title, vibe: document.getElementById('val_vibe').value.trim(), priorities: document.getElementById('val_priorities').value.trim(), action: document.getElementById('val_action').value.trim() };
+        phaseSchema.forEach(cat => cat.tags.forEach(tag => { const el = document.getElementById(`val_${tag.id}`); if (el) newData[tag.id] = el.value.trim(); }));
+        phaseValues[currentActivePhaseKey] = newData; savePhaseData(); toggleOverlay('phase-editor-overlay');
+    }
+
+    function openSchemaEditor() { renderSchemaEditor(); toggleOverlay('schema-editor-overlay'); }
+    function renderSchemaEditor() {
+        const listEl = document.getElementById('schema-list'); listEl.innerHTML = '';
+        phaseSchema.forEach(cat => {
+            let html = `<div style="background: var(--item-active); border: 1px solid var(--border); border-radius: 6px; padding: 15px;"><div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 10px; margin-bottom: 15px;"><b style="font-family: var(--font-serif); font-size: 18px;">${cat.title}</b><button onclick="deleteCategory('${cat.id}')" style="background: none; border: none; color: var(--period-red); cursor: pointer; font-size: 10px; font-weight: bold;">DELETE</button></div><div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">`;
+            cat.tags.forEach(tag => { html += `<div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-paper); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border);"><span style="font-family: var(--font-mono); font-size: 12px; font-weight: bold;">${tag.label}</span><button onclick="deleteTag('${cat.id}', '${tag.id}')" style="background: none; border: none; color: var(--period-red); cursor: pointer; font-weight: bold;">×</button></div>`; });
+            html += `</div><div style="display: flex; gap: 10px;"><input type="text" id="new-tag-${cat.id}" class="modal-input" placeholder="New Tag Name" style="margin: 0; padding: 10px;"><button class="btn-panel" style="width: auto; padding: 10px 15px;" onclick="createNewTag('${cat.id}')">Add</button></div></div>`;
+            listEl.innerHTML += html;
+        });
+    }
+    function createNewCategory() { const title = document.getElementById('new-cat-name').value.trim(); if (!title) return; phaseSchema.push({ id: "cat_" + Date.now(), title, tags: [] }); document.getElementById('new-cat-name').value = ''; savePhaseData(); renderSchemaEditor(); }
+    function createNewTag(catId) { const input = document.getElementById(`new-tag-${catId}`); const label = input.value.trim(); if (!label) return; const cat = phaseSchema.find(c => c.id === catId); if (cat) { cat.tags.push({ id: "t_" + Date.now(), label }); savePhaseData(); renderSchemaEditor(); } }
+    function deleteCategory(catId) { if(confirm("Delete this category globally?")) { phaseSchema = phaseSchema.filter(c => c.id !== catId); savePhaseData(); renderSchemaEditor(); } }
+    function deleteTag(catId, tagId) { if(confirm("Delete this tag structure?")) { const cat = phaseSchema.find(c => c.id === catId); if(cat) { cat.tags = cat.tags.filter(t => t.id !== tagId); savePhaseData(); renderSchemaEditor(); } } }
+
+    /* --- CALENDAR MACRO CALCULATION & RENDERING SHELLS --- */
+    function renderInitialRange() {
+        const content = document.getElementById('calendar-content'); let d = new Date(topDate);
+        while (d < bottomDate) { content.appendChild(createMonthNode(d.getFullYear(), d.getMonth())); d.setMonth(d.getMonth() + 1); }
+    }
+
+    function createMonthNode(year, month) {
+        const wrapper = document.createElement('div'); wrapper.className = 'month-block';
+        const title = document.createElement('div'); title.className = 'month-name'; title.innerText = `${MONTHS[month]} ${year}`; wrapper.appendChild(title);
+        const grid = document.createElement('div'); grid.className = 'calendar-grid';
+        ["MON","TUE","WED","THU","FRI","SAT","SUN"].forEach(d => { const w = document.createElement('div'); w.className = 'weekday'; w.innerText = d; grid.appendChild(w); });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const offset = firstDay === 0 ? 6 : firstDay - 1; 
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const stats = getCycleStats();
+
+        for(let i=0; i<offset; i++) grid.appendChild(document.createElement('div'));
+        for(let d=1; d<=daysInMonth; d++) {
+            const dayEl = document.createElement('div'); const dateStr = formatDate(new Date(year, month, d));
+            dayEl.className = 'day'; dayEl.innerText = d; dayEl.dataset.date = dateStr;
+            updateDayStyle(dayEl, dateStr, stats); dayEl.onclick = () => handleDayClick(dateStr, dayEl);
+            grid.appendChild(dayEl);
+        }
+        wrapper.appendChild(grid); return wrapper;
+    }
+
+    /* --- REFINEMENT: MACRO GRID HEATMAP TINTING --- */
+    function updateDayStyle(el, dateStr, stats) {
+        el.className = 'day'; el.style.boxShadow = '';
+        if (dateStr === formatDate(today)) el.classList.add('today');
+        if (dateStr === formatDate(viewDate) && !isEditMode) el.classList.add('selected');
+        
+        if (loggedDates.includes(dateStr)) el.classList.add('period');
+        else if (stats && stats.lastStart) {
+            const type = getPredictionType(dateStr, stats);
+            if (type === 'period') el.classList.add('predicted');
+            if (type === 'ovulation') el.classList.add('ovulation');
+            
+            const diff = Math.round((new Date(dateStr) - stats.lastStart) / 86400000);
+            let cDay = diff >= 0 ? (diff % stats.avgCycle) + 1 : stats.avgCycle - (Math.abs(diff) % stats.avgCycle) + 1;
+            if(cDay > stats.avgCycle) cDay = 1;
+            
+            const dayKey = getPhaseKey(cDay, stats.avgCycle, stats.avgPeriod);
+            el.style.setProperty('--day-phase-color', phaseColors[dayKey]);
+        }
+    }
+
+    function handleDayClick(dateStr, el) {
+        if (!isEditMode) { viewDate = new Date(dateStr); document.querySelectorAll('.day.selected').forEach(d => d.classList.remove('selected')); el.classList.add('selected'); updateDashboard(); return; }
+        if (loggedDates.includes(dateStr)) loggedDates = loggedDates.filter(d => d !== dateStr); else loggedDates.push(dateStr);
+        localStorage.setItem('dates', JSON.stringify(loggedDates));
+        const stats = getCycleStats(); updateDayStyle(el, dateStr, stats); updateDashboard(); syncToCloud(); 
+    }
+
+    function setupObservers() {
+        const container = document.getElementById('calendar-container'), content = document.getElementById('calendar-content');
+        const options = { root: container, rootMargin: '200px', threshold: 0 };
+        const topObserver = new IntersectionObserver((entries) => {
+            if(entries[0].isIntersecting) {
+                const fragment = document.createDocumentFragment();
+                for(let i=0; i<3; i++) { topDate.setMonth(topDate.getMonth() - 1); fragment.prepend(createMonthNode(topDate.getFullYear(), topDate.getMonth())); }
+                const oldHeight = content.scrollHeight; content.prepend(fragment); container.scrollTop += (content.scrollHeight - oldHeight);
+            }
+        }, options);
+        const bottomObserver = new IntersectionObserver((entries) => {
+            if(entries[0].isIntersecting) {
+                const fragment = document.createDocumentFragment();
+                for(let i=0; i<3; i++) { fragment.appendChild(createMonthNode(bottomDate.getFullYear(), bottomDate.getMonth())); bottomDate.setMonth(bottomDate.getMonth() + 1); }
+                content.appendChild(fragment);
+            }
+        }, options);
+        topObserver.observe(document.getElementById('sentinel-top')); bottomObserver.observe(document.getElementById('sentinel-bottom'));
+    }
+
+    function toggleSheet() { if (!isEditMode) document.getElementById('bottom-sheet').classList.toggle('open'); }
+    function toggleEditMode() {
+        isEditMode = !isEditMode; const sheet = document.getElementById('bottom-sheet'), logBtn = document.getElementById('log-btn');
+        if (isEditMode) { sheet.classList.remove('open'); logBtn.innerText = "DONE LOGGING"; logBtn.classList.add('active'); const stats = getCycleStats(); document.querySelectorAll('.day').forEach(el => updateDayStyle(el, el.dataset.date, stats)); }
+        else { logBtn.innerText = "LOG PERIOD"; logBtn.classList.remove('active'); updateDashboard(); }
+    }
+    function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+    function toggleOverlay(id) { document.getElementById(id).classList.toggle('open'); }
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light'); }
+
+    /* --- STATS ANALYTICS GRAPH CONTROL ENGINE --- */
+    function renderStatsGraph() {
+        const stats = getCycleStats(); if (!stats.lastStart) return; 
+        document.getElementById('stat-avg-cycle').innerText = stats.avgCycle + (stats.cycleDev > 0 ? ` Days (±${stats.cycleDev.toFixed(1)}d)` : " Days");
+        document.getElementById('stat-avg-period').innerText = stats.avgPeriod + " Days";
+
+        const history = processHistoryData(), container = document.getElementById('graph-wrapper');
+        if (history.length < 2) { container.innerHTML = "<p style='width:100%; text-align:center; opacity:0.5; margin-top:50px;'>Log more cycles to see graph.</p>"; return; }
+
+        const pointGap = 80, height = container.clientHeight || 260, padding = 50; 
+        const width = Math.max(container.clientWidth, (history.length * pointGap) + (padding * 2)), maxY = 45; 
+        const scaleY = (val) => height - padding - ((val / maxY) * (height - (padding * 2)));
+
+        let svgContent = '', pathD = ""; const avgY = scaleY(stats.avgCycle);
+        for (let val = 10; val <= 40; val += 10) {
+            const gy = scaleY(val);
+            svgContent += `<line x1="0" y1="${gy}" x2="${width}" y2="${gy}" stroke="var(--border)" stroke-dasharray="4 4" /><text x="${width - 15}" y="${gy + 3}" style="font-size:8px; fill:var(--ink-faded); opacity:0.5; text-anchor:end; font-family:var(--font-mono); font-weight:bold;">${val}D</text>`;
+        }
+        svgContent += `<line x1="0" y1="${avgY}" x2="${width}" y2="${avgY}" class="avg-line" /><text x="${10}" y="${avgY - 5}" class="chart-label" style="text-anchor:start; opacity:0.5;">AVG ${stats.avgCycle}D</text>`;
+        
+        history.forEach((data, index) => {
+            const x = padding + (index * pointGap), barHeight = (data.periodLen / maxY) * (height - (padding*2)), barY = height - padding - barHeight;
+            svgContent += `<rect x="${x - 6}" y="${barY}" width="12" height="${barHeight}" class="chart-bar" />`;
+            if (data.periodLen > 0) svgContent += `<text x="${x}" y="${barY - 8}" class="chart-label" style="fill:var(--period-red); opacity:1;">${data.periodLen}</text>`;
+            if (data.cycleLen > 0) {
+                const y = scaleY(data.cycleLen); pathD += (pathD === "") ? `M ${x} ${y} ` : `L ${x} ${y} `;
+                svgContent += `<circle cx="${x}" cy="${y}" r="4" class="chart-dot" /><text x="${x}" y="${y - 12}" class="chart-label">${data.cycleLen}</text>`;
+            }
+            svgContent += `<text x="${x}" y="${height - 15}" class="chart-label">${data.label}</text>`;
+        });
+        container.innerHTML = `<svg width="${width}" height="${height}" style="min-width:${width}px; display:block;" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg"><path d="${pathD}" class="chart-line" />${svgContent}</svg>`;
+        setTimeout(() => { container.scrollLeft = container.scrollWidth; }, 50);
+
+        // REFINEMENT: TOGGLE CHECKLIST EXCLUSION COMPILER INTERFACE RENDERER
+        renderOutlierChecklist(stats);
+    }
+
+    function renderOutlierChecklist(stats) {
+        const wrapper = document.getElementById('outlier-exclusion-wrapper'); if(!wrapper) return;
+        let html = `<div class="modal-label" style="margin-bottom:12px; padding: 0 20px;">Omit Outlier Baseline Cycles</div><div style="display:flex; flex-direction:column; gap:8px; padding: 0 20px; max-height:160px; overflow-y:auto;">`;
+        [...stats.rawCycles].reverse().forEach(c => {
+            if (c.cycleLen === 0) return; const d = new Date(c.start); const dateLabel = `${MONTHS[d.getMonth()].substring(0,3)} ${d.getFullYear()}`;
+            html += `<label class="exclusion-row"><input type="checkbox" ${c.isExcluded ? 'checked' : ''} onchange="toggleCycleExclusion('${c.start}')"><span style="${c.isExcluded ? 'text-decoration:line-through; opacity:0.5;' : ''} font-weight:bold;">${dateLabel} (${c.cycleLen} Days, Bleed: ${c.periodLen}d)</span></label>`;
+        });
+        html += `</div>`; wrapper.innerHTML = html;
+    }
+
+    function toggleCycleExclusion(startStr) {
+        if (excludedCycles.includes(startStr)) excludedCycles = excludedCycles.filter(s => s !== startStr);
+        else excludedCycles.push(startStr);
+        localStorage.setItem('cycle_excluded_cycles', JSON.stringify(excludedCycles));
+        const stats = getCycleStats(); document.querySelectorAll('.day').forEach(el => updateDayStyle(el, el.dataset.date, stats));
+        renderStatsGraph(); updateDashboard(); syncToCloud();
+    }
+
+    function processHistoryData() {
+        const stats = getCycleStats(); let graphData = [];
+        stats.rawCycles.forEach(c => { graphData.push({ label: MONTHS[new Date(c.start).getMonth()].substring(0, 3), periodLen: c.periodLen, cycleLen: c.cycleLen }); });
+        return graphData;
+    }
+
+    /* --- REFINEMENT: MEDICAL LOG REPORT SPREADSHEETS EXPORTS --- */
+    function exportToCSV() {
+        const stats = getCycleStats(); if(loggedDates.length === 0) return alert("Log data metrics are required to build spreadsheets.");
+        let csv = "Date,Period Day Log Status,Interpreted Cycle Day,Calculated Active Phase Block\n";
+        let all = [...loggedDates].sort(); let current = new Date(all[0]); current.setMonth(current.getMonth() - 1);
+        let end = new Date(all[all.length - 1]); end.setMonth(end.getMonth() + 1);
+
+        while(current <= end) {
+            const dStr = formatDate(current); const logged = loggedDates.includes(dStr) ? "Logged Period" : "Normal Baseline";
+            let cDay = "N/A", pTitle = "Unknown Phase";
+            if (stats.lastStart) {
+                const diff = Math.round((new Date(dStr) - stats.lastStart) / 86400000);
+                cDay = diff >= 0 ? (diff % stats.avgCycle) + 1 : stats.avgCycle - (Math.abs(diff) % stats.avgCycle) + 1;
+                if(cDay > stats.avgCycle) cDay = 1;
+                pTitle = phaseValues[getPhaseKey(cDay, stats.avgCycle, stats.avgPeriod)].title.replace("Phase: ", "");
+            }
+            csv += `${dStr},${logged},${cDay},${pTitle}\n`; current.setDate(current.getDate() + 1);
+        }
+        const link = document.createElement("a"); link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+        link.download = "medical_cycle_report.csv"; document.body.appendChild(link); link.click(); link.remove();
+    }
+
+    function exportToMarkdown() {
+        const stats = getCycleStats(); if(loggedDates.length === 0) return alert("No dates logged.");
+        let md = `# MEDICAL TRACKING REPORT\n\n## Summary Baseline Calculations\n- **Calculated Average Cycle Duration**: ${stats.avgCycle} Days\n- **Calculated Average Bleed Interval**: ${stats.avgPeriod} Days\n- **Hormonal Variation Deviation**: ±${stats.cycleDev.toFixed(1)} Days\n\n## Chronological Clinical Records\n| Start Date Timestamp | Overall Cycle Duration | Active Bleed Days | Status Constraints |\n|---|---|---|---|\n`;
+        stats.rawCycles.forEach(c => { md += `| ${c.start} | ${c.cycleLen || 'Ongoing Running Segment'} | ${c.periodLen} Days | ${c.isExcluded ? 'Omitted Outlier Anomaly' : 'Active Functional Metric'} |\n`; });
+        const link = document.createElement("a"); link.href = "data:text/markdown;charset=utf-8," + encodeURIComponent(md);
+        link.download = "medical_cycle_report.md"; document.body.appendChild(link); link.click(); link.remove();
+    }
+
+    /* --- DISK STAGE PROGRESS PORTS --- */
+    function exportProgress() {
+        const payload = { dates: loggedDates, theme: localStorage.getItem('theme') || 'light', schema: phaseSchema, values: phaseValues, exclusions: excludedCycles };
+        const link = document.createElement('a'); link.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload));
+        link.download = "cycle_offline_backup.json"; document.body.appendChild(link); link.click(); link.remove();
+    }
+    function importProgress() {
+        const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+        input.onchange = e => {
+            const reader = new FileReader(); reader.readAsText(e.target.files[0], 'UTF-8');
+            reader.onload = fileEvent => {
+                try {
+                    const content = JSON.parse(fileEvent.target.result);
+                    if (content.dates) localStorage.setItem('dates', JSON.stringify(content.dates));
+                    if (content.schema) localStorage.setItem('cycle_schema', JSON.stringify(content.schema));
+                    if (content.values) localStorage.setItem('cycle_values', JSON.stringify(content.values));
+                    if (content.exclusions) localStorage.setItem('cycle_excluded_cycles', JSON.stringify(content.exclusions));
+                    alert("Database imported successfully!"); location.reload();
+                } catch (err) { alert("Invalid backup structure."); }
+            }
+        }; input.click();
+    }
+
+    /* --- CLOUD BACKUP CONNECTION INTERFACES --- */
+    function checkCloudStatus() {
+        const statusArea = document.getElementById('cloud-status-area');
+        if (cloudConfig.apiKey && cloudConfig.binId) {
+            statusArea.style.display = 'block'; document.getElementById('cloud-status-txt').innerText = 'CONNECTED';
+            document.getElementById('cloud-bin-id').innerText = cloudConfig.binId; document.getElementById('inp-api-key').value = cloudConfig.apiKey; document.getElementById('inp-bin-id').value = cloudConfig.binId;
+        } else statusArea.style.display = 'none';
+    }
+    async function initCloud() {
+        const key = document.getElementById('inp-api-key').value.trim(), manualBinId = document.getElementById('inp-bin-id').value.trim(); if(!key) return alert('Key required');
+        const btn = document.getElementById('btn-create'); btn.innerText = 'CONNECTING...';
+        try {
+            let binId = manualBinId;
+            if (!binId) {
+                const response = await fetch('https://api.jsonbin.io/v3/b', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Master-Key': key, 'X-Bin-Private': 'true' }, body: JSON.stringify({ dates: loggedDates, theme: localStorage.getItem('theme') || 'light', schema: phaseSchema, values: phaseValues, exclusions: excludedCycles }) });
+                if(!response.ok) throw new Error(); binId = (await response.json()).metadata.id;
+            }
+            cloudConfig = { apiKey: key, binId }; localStorage.setItem('cycle_cloud_config', JSON.stringify(cloudConfig));
+            btn.innerText = 'SUCCESS'; checkCloudStatus(); setTimeout(() => btn.innerText = 'Link / Create', 2000);
+        } catch (e) { alert('Failed Connection.'); btn.innerText = 'RETRY'; }
+    }
+    async function restoreFromCloud() {
+        const key = document.getElementById('inp-api-key').value.trim(), binId = document.getElementById('inp-bin-id').value.trim(); if(!key || !binId) return alert("Credentials needed.");
+        const btn = document.getElementById('btn-restore'); btn.innerText = "DOWNLOADING...";
+        try {
+            const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, { headers: { 'X-Master-Key': key } }); if(!response.ok) throw new Error();
+            const record = (await response.json()).record;
+            if(record.dates) localStorage.setItem('dates', JSON.stringify(record.dates));
+            if(record.theme) localStorage.setItem('theme', record.theme);
+            if(record.schema) localStorage.setItem('cycle_schema', JSON.stringify(record.schema));
+            if(record.values) localStorage.setItem('cycle_values', JSON.stringify(record.values));
+            if(record.exclusions) localStorage.setItem('cycle_excluded_cycles', JSON.stringify(record.exclusions));
+            localStorage.setItem('cycle_cloud_config', JSON.stringify({ apiKey: key, binId })); alert("Restored!"); location.reload();
+        } catch(e) { alert("Error."); btn.innerText = "Restore"; }
+    }
+    async function syncToCloud() {
+        if(!cloudConfig.apiKey || !cloudConfig.binId) return; if (syncTimer) clearTimeout(syncTimer);
+        syncTimer = setTimeout(async () => {
+            try {
+                await fetch(`https://api.jsonbin.io/v3/b/${cloudConfig.binId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': cloudConfig.apiKey }, body: JSON.stringify({ dates: loggedDates, theme: localStorage.getItem('theme') || 'light', schema: phaseSchema, values: phaseValues, exclusions: excludedCycles }) });
+                document.getElementById('cloud-last-sync').innerText = `${new Date().getHours()}:${String(new Date().getMinutes()).padStart(2,'0')}`;
+            } catch(e) { console.error(e); } finally { syncTimer = null; }
+        }, 2000);
+    }
+</script>
+</body>
+</html>
